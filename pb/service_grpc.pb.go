@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.2
-// source: proto/service.proto
+// source: proto/currency_converter.proto
 
 package pb
 
@@ -117,5 +117,5 @@ var CurrencyConverter_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/service.proto",
+	Metadata: "proto/currency_converter.proto",
 }

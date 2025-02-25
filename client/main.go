@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"currency-conversion-service/pb"
 	"fmt"
 	"log"
 	"time"
 
-	pb "currency-conversion-service/pb"
 	"google.golang.org/grpc"
 )
 
@@ -23,9 +23,11 @@ func main() {
 	defer cancel()
 
 	req := &pb.ConvertRequest{
-		FromCurrency: "USD",
-		ToCurrency:   "INR",
-		Amount:       100.0,
+		From: &pb.Money{
+			Currency: "EUR",
+			Amount:   100.0,
+		},
+		ToCurrency: "USD",
 	}
 
 	res, err := client.Convert(ctx, req)
@@ -33,5 +35,5 @@ func main() {
 		log.Fatalf("Could not convert: %v", err)
 	}
 
-	fmt.Printf("%.2f %s is %.2f %s\n", req.Amount, req.FromCurrency, res.ConvertedAmount, req.ToCurrency)
+	fmt.Printf("%.2f %s is %.2f %s\n", req.GetFrom().GetAmount(), req.GetFrom().GetCurrency(), res.GetConverted().GetAmount(), res.GetConverted().GetCurrency())
 }

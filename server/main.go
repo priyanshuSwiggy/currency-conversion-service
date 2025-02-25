@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
+	"currency-conversion-service/config"
+	"currency-conversion-service/convert"
+	"currency-conversion-service/money"
+	pb "currency-conversion-service/pb"
 	"fmt"
+	"google.golang.org/grpc"
 	"log"
 	"net"
-
-	"currency-conversion-service/currency"
-	pb "currency-conversion-service/pb"
-	"google.golang.org/grpc"
 )
 
 type server struct {
@@ -16,21 +17,29 @@ type server struct {
 }
 
 func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.ConvertResponse, error) {
-	fromCurrency, err := currency.GetCurrencyByCode(req.GetFromCurrency())
-	if err != nil {
-		return nil, err
+	from := money.Money{
+		Currency: req.GetFrom().GetCurrency(),
+		Amount:   req.GetFrom().GetAmount(),
 	}
-	toCurrency, err := currency.GetCurrencyByCode(req.GetToCurrency())
-	if err != nil {
-		return nil, err
-	}
-	amount := req.GetAmount()
+	toCurrency := req.ToCurrency
 
-	convertedAmount := currency.Convert(fromCurrency, toCurrency, amount)
-	return &pb.ConvertResponse{ConvertedAmount: convertedAmount}, nil
+	converted, err := convert.Convert(from, toCurrency)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.ConvertResponse{
+		Converted: &pb.Money{
+			Currency: converted.Currency,
+			Amount:   converted.Amount,
+		},
+	}, nil
 }
 
 func main() {
+	if err := config.LoadConversionRates("conversion_rates.json"); err != nil {
+		log.Fatalf("Failed to load conversion rates: %v", err)
+	}
+
 	listener, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
