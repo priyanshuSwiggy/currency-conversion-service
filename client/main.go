@@ -32,7 +32,7 @@ func main() {
 
 	res, err := client.Convert(ctx, req)
 	if err != nil {
-		log.Fatalf("Could not convert: %v", err)
+		log.Fatalf("Could not service: %v", err)
 	}
 
 	fmt.Printf("%.2f %s is %.2f %s\n", req.GetFrom().GetAmount(), req.GetFrom().GetCurrency(), res.GetConverted().GetAmount(), res.GetConverted().GetCurrency())

@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.5
 // 	protoc        v5.29.2
-// source: proto/currency_converter.proto
+// source: proto/money_converter.proto
 
 package pb
 
@@ -119,7 +119,7 @@ func (x *ConvertResponse) GetConverted() *Money {
 
 type Money struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Currency      string                 `protobuf:"bytes,1,opt,name=convert,proto3" json:"convert,omitempty"`
+	Currency      string                 `protobuf:"bytes,1,opt,name=service,proto3" json:"service,omitempty"`
 	Amount        float64                `protobuf:"fixed64,2,opt,name=amount,proto3" json:"amount,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

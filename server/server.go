@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"currency-conversion-service/config"
-	"currency-conversion-service/convert"
 	"currency-conversion-service/money"
 	pb "currency-conversion-service/pb"
+	"currency-conversion-service/service"
+	"currency-conversion-service/util"
 	"fmt"
 	"google.golang.org/grpc"
 	"log"
@@ -23,7 +23,7 @@ func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.Conve
 	}
 	toCurrency := req.ToCurrency
 
-	converted, err := convert.Convert(from, toCurrency)
+	converted, err := service.ConvertMoney(from, toCurrency)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.Conve
 }
 
 func main() {
-	if err := config.LoadConversionRates("conversion_rates.json"); err != nil {
+	if err := util.LoadConversionRates("conversion_rates.json"); err != nil {
 		log.Fatalf("Failed to load conversion rates: %v", err)
 	}
 
