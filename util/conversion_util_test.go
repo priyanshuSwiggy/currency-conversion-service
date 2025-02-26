@@ -1,20 +1,23 @@
 package util
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestLoadConversionRates(t *testing.T) {
 	err := LoadConversionRates("../conversion_rates.json")
-	if err != nil {
-		t.Fatalf("Failed to load conversion rates: %v", err)
-	}
+	assert.NoError(t, err)
+	assert.NotEmpty(t, ConversionRates)
+	assert.Equal(t, 83.0, ConversionRates["USD"])
+}
 
-	if len(ConversionRates) == 0 {
-		t.Fatalf("Conversion rates should not be empty")
-	}
+func TestLoadConversionRatesInvalidFile(t *testing.T) {
+	err := LoadConversionRates("../invalid_file.json")
+	assert.Error(t, err)
+}
 
-	if ConversionRates["USD"] != 83.0 {
-		t.Errorf("Expected USD rate to be 83.0, got %v", ConversionRates["USD"])
-	}
+func TestLoadConversionRatesMalformedJSON(t *testing.T) {
+	err := LoadConversionRates("../malformed_conversion_rates.json")
+	assert.Error(t, err)
 }
