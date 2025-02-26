@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 	"currency-conversion-service/money"
-	pb "currency-conversion-service/pb"
+	pb "currency-conversion-service/proto/moneyconverter"
 	"currency-conversion-service/service"
 	"currency-conversion-service/util"
-	"fmt"
-	"google.golang.org/grpc"
 	"log"
 	"net"
+	"net/http"
+
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"google.golang.org/grpc"
 )
 
 type server struct {
@@ -35,21 +37,38 @@ func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.Conve
 	}, nil
 }
 
+func startGRPCServer() {
+	listener, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+	pb.RegisterMoneyConverterServer(s, &server{})
+	log.Println("gRPC server listening on :50051")
+	if err := s.Serve(listener); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
+}
+
+func startHTTPServer() {
+	ctx := context.Background()
+	mux := runtime.NewServeMux()
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+
+	err := pb.RegisterMoneyConverterHandlerFromEndpoint(ctx, mux, "localhost:50051", opts)
+	if err != nil {
+		log.Fatalf("Failed to start HTTP server: %v", err)
+	}
+
+	log.Println("HTTP server listening on :8085")
+	http.ListenAndServe(":8085", mux)
+}
+
 func main() {
 	if err := util.LoadConversionRates("conversion_rates.json"); err != nil {
 		log.Fatalf("Failed to load conversion rates: %v", err)
 	}
 
-	listener, err := net.Listen("tcp", ":50051")
-	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
-	}
-
-	s := grpc.NewServer()
-	pb.RegisterMoneyConverterServer(s, &server{})
-
-	fmt.Println("gRPC server listening on :50051")
-	if err := s.Serve(listener); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
-	}
+	go startGRPCServer()
+	startHTTPServer()
 }

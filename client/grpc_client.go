@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"currency-conversion-service/pb"
+	pb "currency-conversion-service/proto/moneyconverter"
 	"fmt"
 	"log"
 	"time"
@@ -17,7 +17,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	client := pb.NewCurrencyConverterClient(conn)
+	client := pb.NewMoneyConverterClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -32,8 +32,8 @@ func main() {
 
 	res, err := client.Convert(ctx, req)
 	if err != nil {
-		log.Fatalf("Could not service: %v", err)
+		log.Fatalf("Could not convert: %v", err)
 	}
-
 	fmt.Printf("%.2f %s is %.2f %s\n", req.GetFrom().GetAmount(), req.GetFrom().GetCurrency(), res.GetConverted().GetAmount(), res.GetConverted().GetCurrency())
+
 }
