@@ -13,7 +13,7 @@ import (
 )
 
 type server struct {
-	pb.UnimplementedCurrencyConverterServer
+	pb.UnimplementedMoneyConverterServer
 }
 
 func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.ConvertResponse, error) {
@@ -46,7 +46,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterCurrencyConverterServer(s, &server{})
+	pb.RegisterMoneyConverterServer(s, &server{})
 
 	fmt.Println("gRPC server listening on :50051")
 	if err := s.Serve(listener); err != nil {
