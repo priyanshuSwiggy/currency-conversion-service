@@ -27,7 +27,7 @@ func main() {
 			Currency: "EUR",
 			Amount:   100.0,
 		},
-		ToCurrency: "USD",
+		ToCurrency: "INR",
 	}
 
 	res, err := client.Convert(ctx, req)

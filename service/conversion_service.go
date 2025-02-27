@@ -2,19 +2,25 @@ package service
 
 import (
 	"currency-conversion-service/money"
-	"currency-conversion-service/util"
 	"fmt"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-func ConvertMoney(from money.Money, toCurrency string) (money.Money, error) {
-	fromRate, ok := util.ConversionRates[from.Currency]
-	if !ok {
-		return money.Money{}, fmt.Errorf("invalid from service: %s", from.Currency)
+func ConvertMoney(dsn string, from money.Money, toCurrency string) (money.Money, error) {
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return money.Money{}, err
 	}
-	toRate, ok := util.ConversionRates[toCurrency]
-	if !ok {
-		return money.Money{}, fmt.Errorf("invalid to service: %s", toCurrency)
+
+	var fromRate, toRate float64
+	if err := db.Table("conversion_rates").Select("rate").Where("currency = ?", from.Currency).Scan(&fromRate).Error; err != nil {
+		return money.Money{}, fmt.Errorf("invalid from currency: %s", from.Currency)
 	}
-	convertedAmount := from.Amount * fromRate / toRate
+	if err := db.Table("conversion_rates").Select("rate").Where("currency = ?", toCurrency).Scan(&toRate).Error; err != nil {
+		return money.Money{}, fmt.Errorf("invalid to currency: %s", toCurrency)
+	}
+
+	convertedAmount := from.Amount * toRate / fromRate
 	return money.Money{Currency: toCurrency, Amount: convertedAmount}, nil
 }

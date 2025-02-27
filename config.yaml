@@ -1,0 +1,3 @@
+api:
+  url: "https://openexchangerates.org/api/latest.json"
+  key: "da7046fc817e4b9794df828d24c80027"

@@ -6,6 +6,8 @@ import (
 	pb "currency-conversion-service/proto/moneyconverter"
 	"currency-conversion-service/service"
 	"currency-conversion-service/util"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"log"
 	"net"
 	"net/http"
@@ -16,6 +18,7 @@ import (
 
 type server struct {
 	pb.UnimplementedMoneyConverterServer
+	dsn string
 }
 
 func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.ConvertResponse, error) {
@@ -25,7 +28,7 @@ func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.Conve
 	}
 	toCurrency := req.ToCurrency
 
-	converted, err := service.ConvertMoney(from, toCurrency)
+	converted, err := service.ConvertMoney(s.dsn, from, toCurrency)
 	if err != nil {
 		return nil, err
 	}
@@ -37,13 +40,13 @@ func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.Conve
 	}, nil
 }
 
-func startGRPCServer() {
+func startGRPCServer(dsn string) {
 	listener, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterMoneyConverterServer(s, &server{})
+	pb.RegisterMoneyConverterServer(s, &server{dsn: dsn})
 	log.Println("gRPC server listening on :50051")
 	if err := s.Serve(listener); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
@@ -65,10 +68,26 @@ func startHTTPServer() {
 }
 
 func main() {
-	if err := util.LoadConversionRates("conversion_rates.json"); err != nil {
-		log.Fatalf("Failed to load conversion rates: %v", err)
+	if err := util.LoadConfig("config.yaml"); err != nil {
+		log.Fatal("Failed to load config:", err)
+	}
+	dsn := "host=localhost user=root password=root dbname=conversiondb port=5432 sslmode=disable"
+	_, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal("Failed to connect to the database:", err)
 	}
 
-	go startGRPCServer()
+	// Fetch rates from external API
+	rates, err := util.FetchRates()
+	if err != nil {
+		log.Fatal("Failed to fetch rates:", err)
+	}
+
+	// Update rates in the database
+	if err := util.UpdateRatesInDB(dsn, rates); err != nil {
+		log.Fatal("Failed to update rates in the database:", err)
+	}
+
+	go startGRPCServer(dsn)
 	startHTTPServer()
 }
