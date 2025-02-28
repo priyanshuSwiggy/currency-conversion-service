@@ -2,97 +2,103 @@ package service
 
 import (
 	"currency-conversion-service/money"
-	"currency-conversion-service/util"
+	"currency-conversion-service/service/mocks"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestConvertUSDToINR(t *testing.T) {
-	util.ConversionRates = map[string]float64{
-		"INR": 1.0,
-		"USD": 83.0,
-	}
+	mockDB := new(mocks.MockDB)
+	mockDB.On("GetRate", "TESTUSD").Return(1.0, nil)
+	mockDB.On("GetRate", "TESTINR").Return(87.191146, nil)
 
-	from := money.Money{Currency: "USD", Amount: 100.0}
-	toCurrency := "INR"
-	expectedAmount := 8300.0
+	from := money.Money{Currency: "TESTUSD", Amount: 100.0}
+	toCurrency := "TESTINR"
+	expectedAmount := 8719.1146
 
-	converted, err := ConvertMoney(from, toCurrency)
+	converted, err := mocks.ConvertMoneyWithMock(mockDB, from, toCurrency)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedAmount, converted.Amount)
+
+	mockDB.AssertExpectations(t)
 }
 
 func TestConvertINRToUSD(t *testing.T) {
-	util.ConversionRates = map[string]float64{
-		"INR": 1.0,
-		"USD": 83.0,
-	}
+	mockDB := new(mocks.MockDB)
+	mockDB.On("GetRate", "TESTINR").Return(87.191146, nil)
+	mockDB.On("GetRate", "TESTUSD").Return(1.0, nil)
 
-	from := money.Money{Currency: "INR", Amount: 8300.0}
-	toCurrency := "USD"
+	from := money.Money{Currency: "TESTINR", Amount: 8719.1146}
+	toCurrency := "TESTUSD"
 	expectedAmount := 100.0
 
-	converted, err := ConvertMoney(from, toCurrency)
+	converted, err := mocks.ConvertMoneyWithMock(mockDB, from, toCurrency)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedAmount, converted.Amount)
+
+	mockDB.AssertExpectations(t)
 }
 
 func TestConvertEURToINR(t *testing.T) {
-	util.ConversionRates = map[string]float64{
-		"INR": 1.0,
-		"EUR": 90.0,
-	}
+	mockDB := new(mocks.MockDB)
+	mockDB.On("GetRate", "TESTEUR").Return(0.954039, nil)
+	mockDB.On("GetRate", "TESTINR").Return(87.191146, nil)
 
-	from := money.Money{Currency: "EUR", Amount: 90.0}
-	toCurrency := "INR"
-	expectedAmount := 8100.0
+	from := money.Money{Currency: "TESTEUR", Amount: 90.0}
+	toCurrency := "TESTINR"
+	expectedAmount := 8225.2435
 
-	converted, err := ConvertMoney(from, toCurrency)
+	converted, err := mocks.ConvertMoneyWithMock(mockDB, from, toCurrency)
 	assert.NoError(t, err)
-	assert.Equal(t, expectedAmount, converted.Amount)
+	assert.InEpsilon(t, expectedAmount, converted.Amount, 0.01)
+
+	mockDB.AssertExpectations(t)
 }
 
 func TestConvertINRToEUR(t *testing.T) {
-	util.ConversionRates = map[string]float64{
-		"INR": 1.0,
-		"EUR": 90.0,
-	}
+	mockDB := new(mocks.MockDB)
+	mockDB.On("GetRate", "TESTINR").Return(87.191146, nil)
+	mockDB.On("GetRate", "TESTEUR").Return(0.954039, nil)
 
-	from := money.Money{Currency: "INR", Amount: 8100.0}
-	toCurrency := "EUR"
-	expectedAmount := 90.0
+	from := money.Money{Currency: "TESTINR", Amount: 8227.20314}
+	toCurrency := "TESTEUR"
+	expectedAmount := 90.021
 
-	converted, err := ConvertMoney(from, toCurrency)
+	converted, err := mocks.ConvertMoneyWithMock(mockDB, from, toCurrency)
 	assert.NoError(t, err)
-	assert.Equal(t, expectedAmount, converted.Amount)
+	assert.InEpsilon(t, expectedAmount, converted.Amount, 0.01)
+
+	mockDB.AssertExpectations(t)
 }
 
 func TestConvertUSDToEUR(t *testing.T) {
-	util.ConversionRates = map[string]float64{
-		"USD": 83.0,
-		"EUR": 90.0,
-	}
+	mockDB := new(mocks.MockDB)
+	mockDB.On("GetRate", "TESTUSD").Return(1.0, nil)
+	mockDB.On("GetRate", "TESTEUR").Return(0.954039, nil)
 
-	from := money.Money{Currency: "USD", Amount: 100.0}
-	toCurrency := "EUR"
-	expectedAmount := 92.22
+	from := money.Money{Currency: "TESTUSD", Amount: 100.0}
+	toCurrency := "TESTEUR"
+	expectedAmount := 95.4039
 
-	converted, err := ConvertMoney(from, toCurrency)
+	converted, err := mocks.ConvertMoneyWithMock(mockDB, from, toCurrency)
 	assert.NoError(t, err)
 	assert.InEpsilon(t, expectedAmount, converted.Amount, 0.01)
+
+	mockDB.AssertExpectations(t)
 }
 
 func TestConvertEURToUSD(t *testing.T) {
-	util.ConversionRates = map[string]float64{
-		"USD": 83.0,
-		"EUR": 90.0,
-	}
+	mockDB := new(mocks.MockDB)
+	mockDB.On("GetRate", "TESTEUR").Return(0.954039, nil)
+	mockDB.On("GetRate", "TESTUSD").Return(1.0, nil)
 
-	from := money.Money{Currency: "EUR", Amount: 90.0}
-	toCurrency := "USD"
-	expectedAmount := 97.59
+	from := money.Money{Currency: "TESTEUR", Amount: 90.0}
+	toCurrency := "TESTUSD"
+	expectedAmount := 94.312
 
-	converted, err := ConvertMoney(from, toCurrency)
+	converted, err := mocks.ConvertMoneyWithMock(mockDB, from, toCurrency)
 	assert.NoError(t, err)
 	assert.InEpsilon(t, expectedAmount, converted.Amount, 0.01)
+
+	mockDB.AssertExpectations(t)
 }
