@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"currency-conversion-service/consumer"
+	"currency-conversion-service/dao"
 	"currency-conversion-service/money"
 	pb "currency-conversion-service/proto/moneyconverter"
 	"currency-conversion-service/service"
 	"currency-conversion-service/util"
+	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"log"
@@ -16,7 +18,6 @@ import (
 
 type server struct {
 	pb.UnimplementedMoneyConverterServer
-	dsn string
 }
 
 func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.ConvertResponse, error) {
@@ -26,7 +27,7 @@ func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.Conve
 	}
 	toCurrency := req.ToCurrency
 
-	converted, err := service.ConvertMoney(s.dsn, from, toCurrency)
+	converted, err := service.ConvertMoney(from, toCurrency)
 	if err != nil {
 		return nil, err
 	}
@@ -38,16 +39,16 @@ func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.Conve
 	}, nil
 }
 
-func startGRPCServer(dsn string) {
+func startGRPCServer() {
 	listener, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterMoneyConverterServer(s, &server{dsn: dsn})
+	pb.RegisterMoneyConverterServer(s, &server{})
 	log.Println("gRPC server listening on :50051")
 	if err := s.Serve(listener); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
+		log.Fatalf("gRPC Server error: %v", err)
 	}
 }
 
@@ -69,9 +70,13 @@ func main() {
 	if err := util.LoadConfig("config.yaml"); err != nil {
 		log.Fatal("Failed to load config:", err)
 	}
-	dsn := "host=localhost user=root password=root dbname=conversiondb port=5432 sslmode=disable"
 
-	go startGRPCServer(dsn)
-	go consumer.ConsumeKafkaMessages(dsn)
+	db, err := dao.ConnectDB()
+	if err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
+	fmt.Println("DynamoDB client initialized:", db)
+	go startGRPCServer()
+	go consumer.ConsumeKafkaMessages()
 	startHTTPServer()
 }

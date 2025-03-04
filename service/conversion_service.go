@@ -1,26 +1,37 @@
 package service
 
 import (
+	"currency-conversion-service/dao"
 	"currency-conversion-service/money"
 	"fmt"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"log"
 )
 
-func ConvertMoney(dsn string, from money.Money, toCurrency string) (money.Money, error) {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+func ConvertMoney(from money.Money, toCurrency string) (money.Money, error) {
+	log.Printf("Fetching exchange rate for: %s", from.Currency)
+
+	fromRate, err := dao.GetRate(from.Currency)
 	if err != nil {
-		return money.Money{}, err
+		return money.Money{}, fmt.Errorf("failed to fetch rate for currency %s: %v", from.Currency, err)
 	}
 
-	var fromRate, toRate float64
-	if err := db.Table("conversion_rates").Select("rate").Where("currency = ?", from.Currency).Scan(&fromRate).Error; err != nil {
-		return money.Money{}, fmt.Errorf("invalid from currency: %s", from.Currency)
-	}
-	if err := db.Table("conversion_rates").Select("rate").Where("currency = ?", toCurrency).Scan(&toRate).Error; err != nil {
-		return money.Money{}, fmt.Errorf("invalid to currency: %s", toCurrency)
+	log.Printf("Fetching exchange rate for: %s", toCurrency)
+
+	toRate, err := dao.GetRate(toCurrency)
+	if err != nil {
+		return money.Money{}, fmt.Errorf("failed to fetch rate for currency %s: %v", toCurrency, err)
 	}
 
-	convertedAmount := from.Amount * toRate / fromRate
+	if fromRate == 0 {
+		return money.Money{}, fmt.Errorf("invalid fromRate: %f for currency %s", fromRate, from.Currency)
+	}
+
+	if toRate == 0 {
+		return money.Money{}, fmt.Errorf("invalid toRate: %f for currency %s", toRate, toCurrency)
+	}
+
+	convertedAmount := (from.Amount / fromRate) * toRate
+	log.Printf("Converted %.2f %s to %.2f %s", from.Amount, from.Currency, convertedAmount, toCurrency)
+
 	return money.Money{Currency: toCurrency, Amount: convertedAmount}, nil
 }

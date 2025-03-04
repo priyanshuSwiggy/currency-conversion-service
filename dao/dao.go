@@ -1,8 +1,18 @@
 package dao
 
 import (
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"context"
+	"currency-conversion-service/util"
+	"fmt"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"log"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"strconv"
+	"sync"
 )
 
 type ExchangeRate struct {
@@ -10,14 +20,71 @@ type ExchangeRate struct {
 	Rate     float64 `json:"rate"`
 }
 
-func ConnectDB(dsn string) (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		return nil, err
+var (
+	DynamoClient *dynamodb.Client
+	once         sync.Once
+)
+
+func ConnectDB() (*dynamodb.Client, error) {
+	var err error
+	once.Do(func() {
+		cfg, loadErr := config.LoadDefaultConfig(context.TODO(),
+			config.WithRegion(util.AppConfig.AWS.Region),
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("dummy", "dummy", "")),
+			config.WithEndpointResolver(aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
+				return aws.Endpoint{URL: "http://localhost:8000"}, nil
+			})))
+
+		if loadErr != nil {
+			log.Printf("Failed to load AWS config: %v", loadErr)
+			err = loadErr
+			return
+		}
+
+		DynamoClient = dynamodb.NewFromConfig(cfg)
+		log.Println("DynamoDB client successfully initialized")
+	})
+
+	if DynamoClient == nil {
+		return nil, fmt.Errorf("DynamoDB client initialization failed")
 	}
-	return db, nil
+
+	return DynamoClient, err
 }
 
-func UpdateRateInDB(db *gorm.DB, rate ExchangeRate) error {
-	return db.Table("conversion_rates").Where("currency = ?", rate.Currency).Updates(map[string]interface{}{"rate": rate.Rate}).Error
+func UpdateRateInDB(rate ExchangeRate) error {
+	if DynamoClient == nil {
+		return fmt.Errorf("DynamoClient is not initialized")
+	}
+
+	_, err := DynamoClient.PutItem(context.TODO(), &dynamodb.PutItemInput{
+		TableName: aws.String("conversion_rates"),
+		Item: map[string]types.AttributeValue{
+			"currency": &types.AttributeValueMemberS{Value: rate.Currency},
+			"rate":     &types.AttributeValueMemberN{Value: fmt.Sprintf("%f", rate.Rate)},
+		},
+	})
+	return err
+}
+
+func GetRate(currency string) (float64, error) {
+	if DynamoClient == nil {
+		return 0, fmt.Errorf("DynamoClient is not initialized")
+	}
+
+	result, err := DynamoClient.GetItem(context.TODO(), &dynamodb.GetItemInput{
+		TableName: aws.String("conversion_rates"),
+		Key: map[string]types.AttributeValue{
+			"currency": &types.AttributeValueMemberS{Value: currency},
+		},
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	rate, err := strconv.ParseFloat(result.Item["rate"].(*types.AttributeValueMemberN).Value, 64)
+	if err != nil {
+		return 0, err
+	}
+	return rate, nil
 }

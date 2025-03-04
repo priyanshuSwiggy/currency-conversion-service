@@ -9,19 +9,17 @@ import (
 )
 
 type Config struct {
-	DBConn       string
 	KafkaBrokers string
 	KafkaTopic   string
 }
 
 var config = Config{
-	DBConn:       "host=localhost user=root password=root dbname=conversiondb port=5432 sslmode=disable",
 	KafkaBrokers: "localhost:9092",
 	KafkaTopic:   "currency_updates",
 }
 
-func ConsumeKafkaMessages(dsn string) {
-	db, err := dao.ConnectDB(dsn)
+func ConsumeKafkaMessages() {
+	_, err := dao.ConnectDB()
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -41,12 +39,14 @@ func ConsumeKafkaMessages(dsn string) {
 	for {
 		msg, err := consumer.ReadMessage(-1)
 		if err == nil {
+			log.Printf("Received message: %s\n", string(msg.Value))
+
 			var rate dao.ExchangeRate
 			if err := json.Unmarshal(msg.Value, &rate); err != nil {
 				log.Println("Failed to parse Kafka message:", err)
 				continue
 			}
-			if err := dao.UpdateRateInDB(db, rate); err != nil {
+			if err := dao.UpdateRateInDB(rate); err != nil {
 				log.Println("Failed to update database:", err)
 			} else {
 				log.Printf("Updated rate: %s = %f\n", rate.Currency, rate.Rate)
