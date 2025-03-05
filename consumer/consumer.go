@@ -3,7 +3,7 @@ package consumer
 import (
 	"currency-conversion-service/dao"
 	"encoding/json"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	kafka1 "github.com/confluentinc/confluent-kafka-go/kafka"
 	"log"
 	"time"
 )
@@ -24,7 +24,7 @@ func ConsumeKafkaMessages() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
+	consumer, err := kafka1.NewConsumer(&kafka1.ConfigMap{
 		"bootstrap.servers": config.KafkaBrokers,
 		"group.id":          "currency-conversion-group",
 		"auto.offset.reset": "earliest",
