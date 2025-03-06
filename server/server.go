@@ -18,6 +18,7 @@ import (
 
 type server struct {
 	pb.UnimplementedMoneyConverterServer
+	converter service.MoneyConverter
 }
 
 func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.ConvertResponse, error) {
@@ -27,7 +28,7 @@ func (s *server) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.Conve
 	}
 	toCurrency := req.ToCurrency
 
-	converted, err := service.ConvertMoney(from, toCurrency)
+	converted, err := s.converter.ConvertMoney(from, toCurrency)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +46,7 @@ func startGRPCServer() {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterMoneyConverterServer(s, &server{})
+	pb.RegisterMoneyConverterServer(s, &server{converter: &service.ConverterService{}})
 	log.Println("gRPC server listening on :50051")
 	if err := s.Serve(listener); err != nil {
 		log.Fatalf("gRPC Server error: %v", err)

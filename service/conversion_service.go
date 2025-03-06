@@ -7,7 +7,13 @@ import (
 	"log"
 )
 
-func ConvertMoney(from money.Money, toCurrency string) (money.Money, error) {
+type MoneyConverter interface {
+	ConvertMoney(from money.Money, toCurrency string) (money.Money, error)
+}
+
+type ConverterService struct{}
+
+func (c *ConverterService) ConvertMoney(from money.Money, toCurrency string) (money.Money, error) {
 	log.Printf("Fetching exchange rate for: %s", from.Currency)
 
 	fromRate, err := dao.GetRate(from.Currency)

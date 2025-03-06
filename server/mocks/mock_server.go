@@ -1,31 +1,15 @@
 package mocks
 
 import (
-	"context"
 	"currency-conversion-service/money"
-	pb "currency-conversion-service/pb"
-	"currency-conversion-service/service"
+	"fmt"
 )
 
-type MockServer struct {
-	pb.UnimplementedCurrencyConverterServer
-}
+type MockConverter struct{}
 
-func (s *MockServer) Convert(ctx context.Context, req *pb.ConvertRequest) (*pb.ConvertResponse, error) {
-	from := money.Money{
-		Currency: req.GetFrom().GetCurrency(),
-		Amount:   req.GetFrom().GetAmount(),
+func (m *MockConverter) ConvertMoney(from money.Money, toCurrency string) (money.Money, error) {
+	if toCurrency == "XYZ" {
+		return money.Money{}, fmt.Errorf("unsupported currency")
 	}
-	toCurrency := req.GetToCurrency()
-
-	converted, err := service.ConvertMoney(from, toCurrency)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.ConvertResponse{
-		Converted: &pb.Money{
-			Currency: converted.Currency,
-			Amount:   converted.Amount,
-		},
-	}, nil
+	return money.Money{Currency: toCurrency, Amount: 85}, nil
 }
