@@ -3,7 +3,7 @@ package consumer
 import (
 	"currency-conversion-service/dao"
 	"encoding/json"
-	kafka1 "github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"log"
 	"time"
 )
@@ -18,27 +18,45 @@ var config = Config{
 	KafkaTopic:   "currency_updates",
 }
 
-func ConsumeKafkaMessages() {
-	_, err := dao.ConnectDB()
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
+type KafkaConsumer interface {
+	ReadMessage(timeout time.Duration) (*kafka.Message, error)
+	Close() error
+	SubscribeTopics(topics []string, rebalanceCb kafka.RebalanceCb) error
+}
 
-	consumer, err := kafka1.NewConsumer(&kafka1.ConfigMap{
-		"bootstrap.servers": config.KafkaBrokers,
-		"group.id":          "currency-conversion-group",
-		"auto.offset.reset": "earliest",
-	})
-	if err != nil {
-		log.Fatalf("Failed to create Kafka consumer: %v", err)
-	}
+type Database interface {
+	UpdateRateInDB(rate dao.ExchangeRate) error
+}
 
-	defer consumer.Close()
-	consumer.SubscribeTopics([]string{config.KafkaTopic}, nil)
+func ConsumeKafkaMessages(consumer KafkaConsumer) {
+	db := &dao.DynamoDBClient{Client: dao.DynamoClient}
+	ConsumeMessages(consumer, db)
+	//for {
+	//	msg, err := consumer.ReadMessage(-1)
+	//	if err == nil {
+	//		log.Printf("Received message: %s\n", string(msg.Value))
+	//
+	//		var rate dao.ExchangeRate
+	//		if err := json.Unmarshal(msg.Value, &rate); err != nil {
+	//			log.Println("Failed to parse Kafka message:", err)
+	//			continue
+	//		}
+	//		if err := dao.UpdateRateInDB(rate); err != nil {
+	//			log.Println("Failed to update database:", err)
+	//		} else {
+	//			log.Printf("Updated rate: %s = %f\n", rate.Currency, rate.Rate)
+	//		}
+	//	} else {
+	//		log.Println("Error reading Kafka message:", err)
+	//		time.Sleep(time.Second * 5)
+	//	}
+	//}
+}
 
+func ConsumeMessages(consumer KafkaConsumer, db Database) {
 	for {
 		msg, err := consumer.ReadMessage(-1)
-		if err == nil {
+		if err == nil && msg != nil {
 			log.Printf("Received message: %s\n", string(msg.Value))
 
 			var rate dao.ExchangeRate
@@ -46,7 +64,7 @@ func ConsumeKafkaMessages() {
 				log.Println("Failed to parse Kafka message:", err)
 				continue
 			}
-			if err := dao.UpdateRateInDB(rate); err != nil {
+			if err := db.UpdateRateInDB(rate); err != nil {
 				log.Println("Failed to update database:", err)
 			} else {
 				log.Printf("Updated rate: %s = %f\n", rate.Currency, rate.Rate)
@@ -56,4 +74,17 @@ func ConsumeKafkaMessages() {
 			time.Sleep(time.Second * 5)
 		}
 	}
+}
+
+func NewKafkaConsumer() (KafkaConsumer, error) {
+	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
+		"bootstrap.servers": config.KafkaBrokers,
+		"group.id":          "currency-conversion-group",
+		"auto.offset.reset": "earliest",
+	})
+	if err != nil {
+		return nil, err
+	}
+	consumer.SubscribeTopics([]string{config.KafkaTopic}, nil)
+	return consumer, nil
 }

@@ -25,15 +25,24 @@ var (
 	once         sync.Once
 )
 
+type DynamoDBClient struct {
+	Client *dynamodb.Client
+}
+
+func (d *DynamoDBClient) UpdateRateInDB(rate ExchangeRate) error {
+	return UpdateRateInDB(rate)
+}
+
 func ConnectDB() (*dynamodb.Client, error) {
 	var err error
 	once.Do(func() {
 		cfg, loadErr := config.LoadDefaultConfig(context.TODO(),
 			config.WithRegion(util.AppConfig.AWS.Region),
-			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("dummy", "dummy", "")),
+			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(util.AppConfig.AWS.AccessKeyID, util.AppConfig.AWS.SecretAccessKey, "")),
 			config.WithEndpointResolver(aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
-				return aws.Endpoint{URL: "http://localhost:8000"}, nil
-			})))
+				return aws.Endpoint{URL: util.AppConfig.Server.Endpoint}, nil
+			})),
+		)
 
 		if loadErr != nil {
 			log.Printf("Failed to load AWS config: %v", loadErr)
