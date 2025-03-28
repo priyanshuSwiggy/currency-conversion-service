@@ -54,7 +54,7 @@ func StartHTTPServer() {
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
-	err := pb.RegisterMoneyConverterHandlerFromEndpoint(ctx, mux, "localhost:50051", opts)
+	err := pb.RegisterMoneyConverterHandlerFromEndpoint(ctx, mux, "127.0.0.1:50051", opts)
 	if err != nil {
 		log.Fatalf("Failed to start HTTP server: %v", err)
 	}

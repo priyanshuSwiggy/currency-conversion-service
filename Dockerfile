@@ -1,31 +1,54 @@
 # Use the official Golang image as the base image
-FROM golang:1.23-alpine
-LABEL authors="priyanshu"
+FROM golang:1.23-alpine AS builder
 
-# Set the working directory inside the container
+# Install build tools and dependencies
+RUN apk add --no-cache gcc g++ make git pkgconfig bash zlib-dev zstd-dev lz4-dev openssl-dev libc-dev musl-dev
+
+# Install librdkafka
+RUN git clone https://github.com/edenhill/librdkafka.git \
+    && cd librdkafka \
+    && ./configure --prefix /usr \
+    && make \
+    && make install
+
+# Set the working directory
 WORKDIR /app
 
-# Copy the go.mod and go.sum files
+# Copy go mod and sum files
 COPY go.mod go.sum ./
 
-# Download the Go module dependencies
+# Download all dependencies and tidy up the mod file
 RUN go mod download && go mod tidy
 
-# Copy the rest of the application code
+# Copy the source code
 COPY . .
 
-# Build the Go application
-RUN go build -o server ./server
-RUN go build -o client ./client
+# List contents of /app for debugging
+RUN ls -la /app
 
-# Expose the ports for HTTP and gRPC servers
-EXPOSE 8085
-EXPOSE 50051
+# Build the application
+RUN CGO_ENABLED=1 GOOS=linux go build -tags musl -o main .
 
-# Set environment variables for AWS credentials
-ENV AWS_REGION=us-west-2
-ENV AWS_ACCESS_KEY_ID=dummy
-ENV AWS_SECRET_ACCESS_KEY=dummy
+# List contents of /app again to verify the binary was created
+RUN ls -la /app
 
-# Command to run the server
-CMD ["./server"]
+# Use a smaller base image for the final image
+FROM alpine:latest
+
+# Install runtime dependencies and bind-tools for DNS troubleshooting
+RUN apk add --no-cache ca-certificates librdkafka bind-tools
+
+# Set the working directory
+WORKDIR /root/
+
+# Copy the binary from the builder stage
+COPY --from=builder /app/main .
+
+# Copy the config file
+COPY config.yaml .
+
+# Expose the necessary ports
+EXPOSE 50051 8085
+
+# Run the binary
+CMD ["./main"]

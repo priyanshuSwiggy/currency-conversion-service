@@ -6,4 +6,8 @@ aws:
   accessKeyID: "dummy"
   secretAccessKey: "dummy"
 server:
-  endpoint: "http://localhost:8000"
+  endpoint: "http://127.0.0.1:8085"
+#  endpoint: "http://10.89.2.1:8085"
+kafka:
+  brokers: "kafka:9092"
+  topic: "currency_updates"

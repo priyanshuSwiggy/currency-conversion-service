@@ -19,6 +19,10 @@ type Config struct {
 	Server struct {
 		Endpoint string `yaml:"endpoint"`
 	} `yaml:"server"`
+	Kafka struct {
+		Brokers string `yaml:"brokers"`
+		Topic   string `yaml:"topic"`
+	} `yaml:"kafka"`
 }
 
 var AppConfig Config

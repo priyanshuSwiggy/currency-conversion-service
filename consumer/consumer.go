@@ -2,8 +2,9 @@ package consumer
 
 import (
 	"currency-conversion-service/dao"
+	"currency-conversion-service/util"
 	"encoding/json"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"log"
 	"time"
 )
@@ -14,8 +15,8 @@ type Config struct {
 }
 
 var config = Config{
-	KafkaBrokers: "localhost:9092",
-	KafkaTopic:   "currency_updates",
+	KafkaBrokers: util.AppConfig.Kafka.Brokers,
+	KafkaTopic:   util.AppConfig.Kafka.Topic,
 }
 
 type KafkaConsumer interface {
@@ -31,26 +32,6 @@ type Database interface {
 func ConsumeKafkaMessages(consumer KafkaConsumer) {
 	db := &dao.DynamoDBClient{Client: dao.DynamoClient}
 	ConsumeMessages(consumer, db)
-	//for {
-	//	msg, err := consumer.ReadMessage(-1)
-	//	if err == nil {
-	//		log.Printf("Received message: %s\n", string(msg.Value))
-	//
-	//		var rate dao.ExchangeRate
-	//		if err := json.Unmarshal(msg.Value, &rate); err != nil {
-	//			log.Println("Failed to parse Kafka message:", err)
-	//			continue
-	//		}
-	//		if err := dao.UpdateRateInDB(rate); err != nil {
-	//			log.Println("Failed to update database:", err)
-	//		} else {
-	//			log.Printf("Updated rate: %s = %f\n", rate.Currency, rate.Rate)
-	//		}
-	//	} else {
-	//		log.Println("Error reading Kafka message:", err)
-	//		time.Sleep(time.Second * 5)
-	//	}
-	//}
 }
 
 func ConsumeMessages(consumer KafkaConsumer, db Database) {

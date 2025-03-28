@@ -71,7 +71,7 @@ func RegisterMoneyConverterHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.MoneyConverter/Convert", runtime.WithHTTPPathPattern("/convert"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/pb.MoneyConverter/Convert", runtime.WithHTTPPathPattern("/convertedMoney"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -129,7 +129,7 @@ func RegisterMoneyConverterHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/pb.MoneyConverter/Convert", runtime.WithHTTPPathPattern("/convert"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/pb.MoneyConverter/Convert", runtime.WithHTTPPathPattern("/convertedMoney"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -146,7 +146,7 @@ func RegisterMoneyConverterHandlerClient(ctx context.Context, mux *runtime.Serve
 }
 
 var (
-	pattern_MoneyConverter_Convert_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"convert"}, ""))
+	pattern_MoneyConverter_Convert_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"convertedMoney"}, ""))
 )
 
 var (
